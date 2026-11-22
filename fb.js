@@ -1,7 +1,7 @@
 // Data layer: everything that talks to Firebase lives here.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, deleteField, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -10,20 +10,25 @@ let db;
 try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (e) { db = initializeFirestore(app, {}); }
 
+export const DEL = Symbol("delete");
+const conv = o => o === DEL ? deleteField() : (o && typeof o === "object" && !Array.isArray(o)) ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, conv(v)])) : o;
+
 export const onAuth = cb => onAuthStateChanged(auth, cb);
 export const signIn = (email, pw) => signInWithEmailAndPassword(auth, email, pw);
 export const signOut = () => fbSignOut(auth);
+export const waitWrites = () => waitForPendingWrites(db);
 
-// League settings + lists: league/main
-export const watchMain = (cb, onErr) => onSnapshot(doc(db, "league", "main"), { includeMetadataChanges: true }, s => cb(s.exists() ? s.data() : null, s.metadata.fromCache), onErr);
-// Weeks: weeks/{id}
+export const watchMain = (cb, onErr) => onSnapshot(doc(db, "league", "main"), s => cb(s.exists() ? s.data() : null), onErr);
 export const watchWeeks = (cb, onErr) => onSnapshot(collection(db, "weeks"), s => cb(s.docs.map(d => ({ id: d.id, ...d.data() }))), onErr);
-// Public referee view (no login): public/{weekId}
 export const watchPublic = (cb, onErr) => onSnapshot(collection(db, "public"), s => cb(s.docs.map(d => ({ id: d.id, ...d.data() }))), onErr);
 
-export const saveMain = data => setDoc(doc(db, "league", "main"), data);
-export const saveWeek = w => { const { id, ...data } = w; return setDoc(doc(db, "weeks", id), data); };
-export const savePublic = w => setDoc(doc(db, "public", w.id), {
-  num: w.num, date: w.date,
-  games: w.games.map(g => ({ time: g.time, park: g.park, field: g.field, home: g.home, away: g.away, c: g.c, a1: g.a1, a2: g.a2, status: g.status }))
-});
+// Only the fields that changed are sent, so two staff editing different games never erase each other.
+export const patch = (coll, id, obj) => setDoc(doc(db, coll, id), conv(obj), { merge: true });
+export const replace = (coll, id, obj) => setDoc(doc(db, coll, id), obj);
+
+export async function isEmptyOnServer() {
+  const m = await getDocFromServer(doc(db, "league", "main"));
+  if (m.exists()) return false;
+  const w = await getDocsFromServer(collection(db, "weeks"));
+  return w.empty;
+}

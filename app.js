@@ -34,7 +34,8 @@ let lang = 'es'; try { lang = localStorage.getItem('lcf-lang') || 'es'; } catch 
 const t = (k, v) => { let s = (L[lang][k] ?? L.en[k] ?? k); if (v) for (const x in v) s = s.split('{' + x + '}').join(v[x]); return s; };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
-const APP_URL = location.origin + location.pathname;
+const APP_URL = location.origin + location.pathname.replace(/[^/]*$/, '');
+const REF_URL = APP_URL + 'arbitros.html';
 
 // ---------- state ----------
 let user = null, authReady = false, loginErr = '';
@@ -46,7 +47,7 @@ let unsub = [];
 
 const newest = ws => ws.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
 const week = () => S.weeks.find(w => w.id === viewWeekId) || newest(S.weeks);
-const view = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : 'schedule'; };
+const view = () => { if (window.REF_ONLY) return 'refs'; const h = location.hash.slice(1); return VIEWS.includes(h) ? h : 'schedule'; };
 
 // ---------- helpers ----------
 function fmtTime(hm){if(!hm)return '';let[h,m]=hm.split(':').map(Number);const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(m).padStart(2,'0')+' '+ap}
@@ -64,51 +65,81 @@ function warnings(w){const out=[];const byT={};w.games.forEach(g=>{(byT[g.time]=
  const tc={};w.games.forEach(g=>[g.home,g.away].forEach(x=>{const n=(x||'').trim().toLowerCase();if(!n)return;if(tc[n])out.push(t('w_team',{x}));tc[n]=1}));return [...new Set(out)]}
 
 // ---------- saving ----------
-const dirty = new Set(); let wtimer = null, saveState = '';
+// Every edit becomes a small "patch" (only what changed). Patches wait 0.7s, then go to Firebase.
+const pending = {}; let wtimer = null, saveState = '', saveErr = '';
+const isObj = o => o && typeof o === 'object' && !Array.isArray(o);
+function merge(a, b){ for (const k in b){ if (b[k] === fb.DEL) delete a[k]; else if (isObj(b[k])) a[k] = merge(isObj(a[k]) ? a[k] : {}, b[k]); else a[k] = b[k]; } return a; }
+// Pending patches merged for display: keep DEL markers so they also apply to incoming data
+function mergeKeep(a, b){ for (const k in b){ if (isObj(b[k])) a[k] = mergeKeep(isObj(a[k]) ? a[k] : {}, b[k]); else a[k] = b[k]; } return a; }
 function setSave(s){saveState=s;const el=document.getElementById('save');if(!el)return;
  const st=s==='busy'&&!navigator.onLine?'off':s;
  el.className='save '+(st==='busy'||st==='off'?'busy':st==='err'?'err':st?'ok':'');
  el.textContent=st==='busy'?t('saving'):st==='off'?t('offline'):st==='err'?t('err'):st==='ok'?t('saved'):''}
-const mainData = () => ({ settings: S.settings, teams: S.teams, refs: S.refs, parks: S.parks });
-function saveW(){ const w = week(); if (w) { dirty.add(w.id); queue(); } }
-function saveM(){ dirty.add('main'); queue(); }
-function queue(){ setSave('busy'); clearTimeout(wtimer); wtimer = setTimeout(flush, 700); }
-async function flush(){ const keys=[...dirty]; dirty.clear();
- try { await Promise.all(keys.map(k => { if (k === 'main') return fb.saveMain(mainData()); const w = S.weeks.find(x => x.id === k); return w ? Promise.all([fb.saveWeek(w), fb.savePublic(w)]) : null; }));
-  if (!dirty.size) setSave('ok'); }
- catch (e) { console.error(e); setSave('err'); if (e && e.code === 'permission-denied') { accessDenied = true; render(); } } }
+function patch(key, obj){ pending[key] = mergeKeep(pending[key] || {}, obj); setSave('busy'); clearTimeout(wtimer); wtimer = setTimeout(flush, 700); }
+const PUBK = ['time','park','field','home','away','c','a1','a2','status'];
+function patchGame(w, g, ch){ patch('weeks/'+w.id, { games: { [g.id]: ch } });
+ const p = {}; for (const k in ch) if (PUBK.includes(k)) p[k] = ch[k];
+ if (Object.keys(p).length) patch('public/'+w.id, { num: w.num, date: w.date, games: { [g.id]: p } }); }
+const pubGame = g => Object.fromEntries(PUBK.map(k => [k, g[k] ?? '']));
+function patchWeekFields(w, ch){ patch('weeks/'+w.id, ch); const p = {}; if ('num' in ch) p.num = ch.num; if ('date' in ch) p.date = ch.date; if (Object.keys(p).length) patch('public/'+w.id, p); }
+const saveM = () => patch('league/main', { settings: S.settings, teams: S.teams, refs: S.refs, parks: S.parks });
+async function flush(){ clearTimeout(wtimer); const keys = Object.keys(pending); if (!keys.length) return;
+ const jobs = keys.map(k => { const obj = pending[k]; delete pending[k]; const [c, id] = k.split('/'); return fb.patch(c, id, obj); });
+ try { await Promise.all(jobs); if (!Object.keys(pending).length) { saveErr = ''; setSave('ok'); } }
+ catch (e) { console.error(e); saveErr = (e && (e.code || e.message)) || 'error'; setSave('err'); if (e && e.code === 'permission-denied') accessDenied = true; render(); } }
 window.addEventListener('online', () => setSave(saveState));
 window.addEventListener('offline', () => setSave(saveState));
+// Save right away if the app is closed or put in the background
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+window.addEventListener('pagehide', () => flush());
 
 // Don't redraw while someone is typing; redraw when they leave the field.
 let pendingRender = false;
 const typing = () => { const a = document.activeElement; return a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.closest('main'); };
-function softRender(){ if (typing()) pendingRender = true; else render(); }
+function softRender(){ if (typing()) { pendingRender = true; syncInputs(); } else render(); }
+// While someone types, still show other staff's changes in the other boxes
+function syncInputs(){ const w = week(); if (!w) return; document.querySelectorAll('main input[data-act=g]').forEach(el => { if (el === document.activeElement) return; const g = w.games.find(x => x.id === el.dataset.id); const v = g ? (g[el.dataset.k] ?? '') : ''; if (g && el.value !== v) el.value = v; }); }
 document.addEventListener('focusout', () => setTimeout(() => { if (pendingRender && !typing()) { pendingRender = false; render(); } }, 60));
 
-// ---------- seed (first login ever) ----------
+// ---------- reading data from Firebase ----------
+const toMap = gs => Array.isArray(gs) ? Object.fromEntries(gs.map(g => [g.id, g])) : (gs || {});
+const toArr = (m) => Object.entries(m || {}).map(([id, g]) => ({ ...g, id, cards: g.cards || [] }));
+function mainFrom(d){ const m = merge(JSON.parse(JSON.stringify(d || {})), pending['league/main'] || {}); S.settings = m.settings || { fee: null, center: 70, side: 45 }; S.teams = m.teams || []; S.refs = m.refs || []; S.parks = m.parks || []; }
+function weekFrom(raw){ const d = { ...raw, games: toMap(raw.games) }; const p = pending['weeks/' + raw.id]; const m = p ? merge(JSON.parse(JSON.stringify(d)), p) : d;
+ return { id: raw.id, num: m.num, date: m.date, posted: !!m.posted, refPaid: m.refPaid || {}, games: toArr(m.games) }; }
+const migrated = new Set();
+function migrate(raw){ // old format (games as a list) -> games by id
+ if (!Array.isArray(raw.games) || migrated.has(raw.id)) return; migrated.add(raw.id);
+ const w = weekFrom(raw); const { id, ...data } = w; data.games = Object.fromEntries(w.games.map(g => { const { id: gid, ...rest } = g; return [gid, rest]; }));
+ fb.replace('weeks', id, data).catch(console.error);
+ fb.replace('public', id, { num: w.num, date: w.date, games: Object.fromEntries(w.games.map(g => [g.id, pubGame(g)])) }).catch(console.error); }
+
+// ---------- seed (first login ever, only if the database is really empty) ----------
 function seedData(){
  const g=[["09:00","8","Monarcas FC","La Gartos"],["09:00","9","Jalisco","Winter Haven"],["09:00","10","Los Juniors","Teno Jr"],["11:00","8","DP Oaxaca","San Juan"],["11:00","9","Huatulco","Franco Cana"],["11:00","10","La Union FC","Dragones FC"],["13:00","8","La Mesilla FC","Pachuca"],["13:00","9","Haitian Utd","Zapata"],["13:00","10","Wahneta","Rebano Sagrado"]];
  const games=g.map(([time,field,home,away])=>newGame({time,field,home,away,park:'Simmers Young Park'}));
  const teams=[...new Set(g.flatMap(x=>[x[2],x[3]]))].sort((a,b)=>a.localeCompare(b));
  return { main:{settings:{fee:null,center:70,side:45},teams,refs:[],parks:['Simmers Young Park','Wahneta Fields']}, week:{id:'w15',num:15,date:'2026-11-22',posted:true,refPaid:{},games} };
 }
-let seeded = false;
-async function seedIfEmpty(){ if (seeded) return; seeded = true; const s = seedData();
- Object.assign(S, s.main); S.weeks = [s.week]; viewWeekId = 'w15'; render();
- try { await fb.saveMain(s.main); await fb.saveWeek(s.week); await fb.savePublic(s.week); } catch (e) { console.error(e); if (e.code === 'permission-denied') { accessDenied = true; render(); } } }
+async function seedIfEmpty(){ try { if (!(await fb.isEmptyOnServer())) return; } catch (e) { return; }
+ const s = seedData(); const w = s.week;
+ await fb.replace('league', 'main', s.main);
+ await fb.replace('weeks', w.id, { num: w.num, date: w.date, posted: w.posted, refPaid: {}, games: Object.fromEntries(w.games.map(g => { const { id, ...r } = g; return [id, r]; })) });
+ await fb.replace('public', w.id, { num: w.num, date: w.date, games: Object.fromEntries(w.games.map(g => [g.id, pubGame(g)])) }); }
 
 // ---------- auth + live data ----------
+const INITIAL_REFS = ['Antonio','Ruso','Arturo','Chago','Bruno','Armando','Wilmer','Sobrino','Albaro','Charly','Corsel','Davide','Ramon','Alex'];
+let mainSeen = false, weeksSeen = false;
 function startStaff(){
- unsub.push(fb.watchMain((d, fromCache) => { if (d) { if (!dirty.has('main')) { S.settings = d.settings || S.settings; S.teams = d.teams || []; S.refs = d.refs || []; S.parks = d.parks || []; } mainLoaded = true; softRender(); }
-  else if (!fromCache) { mainLoaded = true; if (weeksLoaded && !S.weeks.length) seedIfEmpty(); else softRender(); } }, e => { if (e && e.code === 'permission-denied') { accessDenied = true; render(); } }));
- const onErr = e => { if (e && e.code === 'permission-denied') { accessDenied = true; render(); } };
- unsub.push(fb.watchWeeks(ws => { const keep = S.weeks.filter(w => dirty.has(w.id)); S.weeks = ws.filter(w => !dirty.has(w.id)).concat(keep);
-  S.weeks.forEach(w => { w.games = w.games || []; w.refPaid = w.refPaid || {}; });
-  weeksLoaded = true; if (!viewWeekId && S.weeks.length) viewWeekId = newest(S.weeks).id;
-  if (mainLoaded && !S.weeks.length) seedIfEmpty(); else softRender(); }, onErr));
+ const onErr = e => { console.error(e); if (e && e.code === 'permission-denied') { accessDenied = true; render(); } };
+ unsub.push(fb.watchMain(d => { mainFrom(d); mainLoaded = !!d;
+  if (d && !d.refsAdded1) { INITIAL_REFS.forEach(n => addList('refs', n)); patch('league/main', { refs: S.refs, refsAdded1: true }); }
+  softRender(); }, onErr));
+ unsub.push(fb.watchWeeks(ws => { ws.forEach(migrate); S.weeks = ws.map(weekFrom);
+  weeksLoaded = true; if (!viewWeekId || !S.weeks.some(w => w.id === viewWeekId)) viewWeekId = S.weeks.length ? newest(S.weeks).id : null; softRender(); }, onErr));
+ seedIfEmpty().catch(onErr);
 }
-function startPublic(){ if (unsub.length) return; unsub.push(fb.watchPublic(ws => { PUB = ws; softRender(); }, () => { pubErr = true; render(); })); }
+function startPublic(){ if (unsub.length) return; unsub.push(fb.watchPublic(ws => { PUB = ws.map(w => ({ id: w.id, num: w.num, date: w.date, games: toArr(toMap(w.games)) })); softRender(); }, () => { pubErr = true; render(); })); }
 function stopAll(){ unsub.forEach(u => { try { u(); } catch (e) {} }); unsub = []; }
 
 fb.onAuth(u => { stopAll(); user = u; authReady = true; accessDenied = false; mainLoaded = weeksLoaded = false; S.weeks = []; viewWeekId = null; PUB = null;
@@ -136,7 +167,7 @@ function vSchedule(w){let h=reminder();
   +'<div class="g3 r mt">'+[['c','center'],['a1','ar1'],['a2','ar2']].map(([k,l])=>'<label class="f">'+t(l)+'<input list="dlr" data-act="g" data-id="'+g.id+'" data-k="'+k+'" value="'+esc(g[k])+'"></label>').join('')+'</div>'
   +'<div class="row mt" style="justify-content:flex-end"><button class="btn sm del" data-act="delgame" data-id="'+g.id+'">'+t('del')+'</button></div></div>'})});
  h+='<div class="row mt"><button class="btn" data-act="addgame">'+t('addGame')+'</button><button class="btn" data-act="addslot">'+t('addSlot')+'</button></div>';
- const link=APP_URL+'#refs';
+ const link=REF_URL;
  h+='<div class="card mt"><b>'+t('refLink')+'</b><div class="muted mt mb">'+t('refLinkHint')+'</div><input readonly value="'+esc(link)+'" class="mb"><div class="row"><button class="btn pri sm" data-act="copylink">'+t('copy')+'</button><a class="btn sm" style="text-decoration:none;background:#1f7a45;border-color:#1f7a45" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(t('waMsg')+' '+link)+'">'+t('wa')+'</a><a class="btn sm" href="#refs" style="text-decoration:none">'+t('preview')+'</a></div></div>';
  return h}
 function vGameday(w){const f=feeStats(w);const fin=w.games.filter(g=>g.status==='final').length;
@@ -182,7 +213,7 @@ function vRefs(w){if(!w)return '<div class="empty">'+(PUB||pubErr?t('noPublic'):
   gs.forEach(g=>{const mine=me&&[g.c,g.a1,g.a2].some(x=>(x||'').trim().toLowerCase()===me);if(me&&!mine)return;const rn=(k,l)=>'<span class="'+(me&&(g[k]||'').trim().toLowerCase()===me?'me':'')+'">'+t(l)+': <b>'+esc(g[k]||'—')+'</b></span>';
   rows+='<div class="card'+(mine?' hl':'')+'"><div class="row" style="justify-content:space-between"><span class="fb">'+t('field')+' '+esc(g.field)+'</span><span class="pk">'+esc(g.park)+'</span></div><div class="match" style="margin:8px 0"><div class="team h">'+esc(g.home)+'</div><span class="muted">vs</span><div class="team">'+esc(g.away)+'</div></div><div class="refs" style="display:flex;gap:12px;flex-wrap:wrap">'+rn('c','center')+rn('a1','ar1')+rn('a2','ar2')+'</div></div>'});
   if(rows)h+='<div class="band">'+fmtTime(gr.time)+'<small>'+t('kickoff')+'</small></div>'+rows});
- if(user)h+='<p style="text-align:center"><a href="#schedule" style="color:var(--or)">← '+t('schedule')+'</a></p>';
+ if(user&&!window.REF_ONLY)h+='<p style="text-align:center"><a href="#schedule" style="color:var(--or)">← '+t('schedule')+'</a></p>';
  return h}
 function render(){const v=view();const app=document.getElementById('app');document.documentElement.lang=lang;
  if(!authReady){app.innerHTML='<div class="empty">'+t('loading')+'</div>';return}
@@ -193,7 +224,7 @@ function render(){const v=view();const app=document.getElementById('app');docume
  const w=week();
  const body=v==='schedule'?vSchedule(w):v==='gameday'?vGameday(w):v==='payouts'?vPayouts(w):v==='graphic'?vGraphic(w):v==='history'?vHistory():vSetup();
  const title=v==='history'||v==='setup'?'':'<h2>'+t(v)+' · '+t('week')+' '+w.num+' <span class="muted" style="font-weight:600">'+esc(fmtDate(w.date))+'</span></h2>';
- app.innerHTML=header(v)+'<main>'+title+body+'</main>'+dl('dlt',S.teams)+dl('dlr',S.refs)+dl('dlp',S.parks);
+ app.innerHTML=header(v)+'<main>'+(saveErr?'<div class="warns"><b>⚠ '+t('err')+'</b> ('+esc(saveErr)+')</div>':'')+title+body+'</main>'+dl('dlt',S.teams)+dl('dlr',S.refs)+dl('dlp',S.parks);
  setSave(saveState);if(v==='graphic')drawGraphic(w)}
 
 // ---------- graphic ----------
@@ -228,36 +259,44 @@ function gfxBlob(){return new Promise(r=>gcanvas.toBlob(r,'image/png'))}
 // ---------- actions ----------
 function addList(k,v){v=(v||'').trim();if(v&&!S[k].some(x=>x.toLowerCase()===v.toLowerCase())){S[k].push(v);S[k].sort((a,b)=>a.localeCompare(b));return true}return false}
 function game(id){return week().games.find(g=>g.id===id)}
-function newGame(o){return Object.assign({id:uid(),time:'09:00',park:S.parks[0]||'',field:'',home:'',away:'',c:'',a1:'',a2:'',status:'sched',hs:'',as:'',paidH:false,paidA:false,cards:[]},o)}
+function newGame(o){return Object.assign({id:uid(),time:'09:00',park:(S.parks&&S.parks[0])||'',field:'',home:'',away:'',c:'',a1:'',a2:'',status:'sched',hs:'',as:'',paidH:false,paidA:false,cards:[]},o)}
+const fullGame = g => { const { id, ...r } = g; return r; };
 let armed=null;
 document.addEventListener('submit',async e=>{if(e.target.id!=='loginf')return;e.preventDefault();loginErr='';
  try{await fb.signIn(document.getElementById('le').value.trim(),document.getElementById('lp').value)}catch(x){loginErr=t('loginErr');render()}});
+// Save text while typing (not only when leaving the box)
+document.addEventListener('input',e=>{const el=e.target;if(el.dataset.act!=='g'||!user)return;const w=week(),g=game(el.dataset.id);if(!g)return;const k=el.dataset.k;g[k]=el.value;patchGame(w,g,{[k]:el.value.trim()})});
 document.addEventListener('change',e=>{const el=e.target,a=el.dataset.act;if(!a||!user&&a!=='reffilter')return;const w=week();
- if(a==='g'){const g=game(el.dataset.id),k=el.dataset.k;g[k]=el.value.trim();let m=false;if(k==='home'||k==='away')m=addList('teams',g[k]);if(['c','a1','a2'].includes(k))m=addList('refs',g[k]);if(k==='park')m=addList('parks',g[k]);saveW();if(m)saveM();
+ if(a==='g'){const g=game(el.dataset.id),k=el.dataset.k;if(!g)return;g[k]=el.value.trim();patchGame(w,g,{[k]:g[k]});let m=false;if(k==='home'||k==='away')m=addList('teams',g[k]);if(['c','a1','a2'].includes(k))m=addList('refs',g[k]);if(k==='park')m=addList('parks',g[k]);if(m)saveM();
   if(el.dataset.rr)render();else{const wb=document.getElementById('warns');if(wb)wb.innerHTML=warnHtml(w)}}
- else if(a==='paid'){game(el.dataset.id)[el.dataset.k]=el.checked;saveW();render()}
- else if(a==='wk'){const k=el.dataset.k;w[k]=k==='num'?(parseInt(el.value)||w.num):(el.value||w.date);saveW();render()}
+ else if(a==='paid'){const g=game(el.dataset.id);g[el.dataset.k]=el.checked;patchGame(w,g,{[el.dataset.k]:el.checked});render()}
+ else if(a==='wk'){const k=el.dataset.k;w[k]=k==='num'?(parseInt(el.value)||w.num):(el.value||w.date);patchWeekFields(w,{[k]:w[k]});render()}
  else if(a==='weeksel'){viewWeekId=el.value;render()}
- else if(a==='refpaid'){w.refPaid[el.dataset.n]=el.checked;saveW();render()}
- else if(a==='posted'){w.posted=el.checked;saveW();render()}
+ else if(a==='refpaid'){w.refPaid[el.dataset.n]=el.checked;patch('weeks/'+w.id,{refPaid:{[el.dataset.n]:el.checked}});render()}
+ else if(a==='posted'){w.posted=el.checked;patchWeekFields(w,{posted:w.posted});render()}
  else if(a==='set'){const k=el.dataset.k;const n=parseFloat(el.value);S.settings[k]=k==='fee'?(isNaN(n)?null:n):(isNaN(n)?S.settings[k]:n);saveM()}
  else if(a==='list'){S[el.dataset.k]=[...new Set(el.value.split('\n').map(x=>x.trim()).filter(Boolean))];saveM()}
  else if(a==='reffilter'){refFilter=el.value;render()}});
 document.addEventListener('click',async e=>{const el=e.target.closest('[data-act]');if(!el||/SELECT|INPUT|TEXTAREA/.test(el.tagName))return;const a=el.dataset.act;
  if(a==='lang'){lang=el.dataset.v;try{localStorage.setItem('lcf-lang',lang)}catch(x){}render();return}
- if(a==='signout'){stopAll();await fb.signOut();location.hash='';return}
+ if(a==='signout'){el.disabled=true;try{await flush();await fb.waitWrites()}catch(x){}stopAll();await fb.signOut();location.hash='';return}
  if(!user)return;const w=week();
- if(a==='status'){game(el.dataset.id).status=el.dataset.v;saveW();render()}
- else if(a==='addcard'){const id=el.dataset.id,p=document.getElementById('cp-'+id),tm=document.getElementById('ct-'+id);if(!p.value.trim()){p.focus();return}const g=game(id);g.cards=g.cards||[];g.cards.push({type:el.dataset.v,team:tm.value,player:p.value.trim()});saveW();render()}
- else if(a==='delcard'){game(el.dataset.id).cards.splice(+el.dataset.i,1);saveW();render()}
- else if(a==='addgame'){const last=w.games[w.games.length-1];w.games.push(newGame(last?{time:last.time,park:last.park,field:String((parseInt(last.field)||7)+1)}:{}));saveW();render()}
- else if(a==='addslot'){const gs=groups(w);const last=gs[gs.length-1];let tm='09:00',park=S.parks[0]||'',fields=['8','9','10'];if(last){const[h,m]=last.time.split(':').map(Number);tm=String(Math.min(h+2,23)).padStart(2,'0')+':'+String(m).padStart(2,'0');park=last.games[0].park;fields=last.games.map(g=>g.field)}fields.forEach(f=>w.games.push(newGame({time:tm,park,field:f})));saveW();render()}
- else if(a==='delgame'){if(armed!==el.dataset.id){armed=el.dataset.id;el.textContent=t('sure');el.classList.add('warn');setTimeout(()=>{if(armed===el.dataset.id){armed=null;el.textContent=t('del');el.classList.remove('warn')}},3000);return}armed=null;w.games=w.games.filter(g=>g.id!==el.dataset.id);saveW();render()}
+ if(a==='status'){const g=game(el.dataset.id);g.status=el.dataset.v;patchGame(w,g,{status:g.status});render()}
+ else if(a==='addcard'){const id=el.dataset.id,p=document.getElementById('cp-'+id),tm=document.getElementById('ct-'+id);if(!p.value.trim()){p.focus();return}const g=game(id);g.cards=g.cards||[];g.cards.push({type:el.dataset.v,team:tm.value,player:p.value.trim()});patchGame(w,g,{cards:g.cards});render()}
+ else if(a==='delcard'){const g=game(el.dataset.id);g.cards.splice(+el.dataset.i,1);patchGame(w,g,{cards:g.cards});render()}
+ else if(a==='addgame'||a==='addslot'){let add=[];if(a==='addgame'){const last=w.games[w.games.length-1];add=[newGame(last?{time:last.time,park:last.park,field:String((parseInt(last.field)||7)+1)}:{})]}
+  else{const gs=groups(w);const last=gs[gs.length-1];let tm='09:00',park=S.parks[0]||'',fields=['8','9','10'];if(last){const[h,m]=last.time.split(':').map(Number);tm=String(Math.min(h+2,23)).padStart(2,'0')+':'+String(m).padStart(2,'0');park=last.games[0].park;fields=last.games.map(g=>g.field)}add=fields.map(f=>newGame({time:tm,park,field:f}))}
+  add.forEach(g=>{w.games.push(g);patch('weeks/'+w.id,{games:{[g.id]:fullGame(g)}});patch('public/'+w.id,{num:w.num,date:w.date,games:{[g.id]:pubGame(g)}})});render()}
+ else if(a==='delgame'){if(armed!==el.dataset.id){armed=el.dataset.id;el.textContent=t('sure');el.classList.add('warn');setTimeout(()=>{if(armed===el.dataset.id){armed=null;el.textContent=t('del');el.classList.remove('warn')}},3000);return}armed=null;const id=el.dataset.id;w.games=w.games.filter(g=>g.id!==id);patch('weeks/'+w.id,{games:{[id]:fb.DEL}});patch('public/'+w.id,{games:{[id]:fb.DEL}});render()}
  else if(a==='newweek'){const base=newest(S.weeks);const d=pDate(base.date);d.setDate(d.getDate()+7);
-  const nw={id:'w'+iso(d).replace(/-/g,''),num:base.num+1,date:iso(d),posted:false,refPaid:{},games:base.games.filter(g=>g.status!=='cancel').map(g=>newGame({time:g.time,park:g.park,field:g.field}))};
-  if(S.weeks.some(x=>x.id===nw.id))nw.id+='-'+uid();S.weeks.push(nw);viewWeekId=nw.id;saveW();location.hash='schedule';render()}
+  let id='w'+iso(d).replace(/-/g,'');if(S.weeks.some(x=>x.id===id))id+='-'+uid();
+  const nw={id,num:base.num+1,date:iso(d),posted:false,refPaid:{},games:base.games.filter(g=>g.status!=='cancel').map(g=>newGame({time:g.time,park:g.park,field:g.field}))};
+  S.weeks.push(nw);viewWeekId=nw.id;
+  patch('weeks/'+id,{num:nw.num,date:nw.date,posted:false,refPaid:{},games:Object.fromEntries(nw.games.map(g=>[g.id,fullGame(g)]))});
+  patch('public/'+id,{num:nw.num,date:nw.date,games:Object.fromEntries(nw.games.map(g=>[g.id,pubGame(g)]))});
+  location.hash='schedule';render()}
  else if(a==='openweek'){viewWeekId=el.dataset.id;location.hash='schedule';render()}
- else if(a==='copylink'){try{await navigator.clipboard.writeText(APP_URL+'#refs');el.textContent=t('copied')}catch(x){const i=el.closest('.card').querySelector('input');if(i)i.select()}}
+ else if(a==='copylink'){try{await navigator.clipboard.writeText(REF_URL);el.textContent=t('copied')}catch(x){const i=el.closest('.card').querySelector('input');if(i)i.select()}}
  else if(a==='dlgfx'){if(!gcanvas)return;const b=await gfxBlob();const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download=gfxName();document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)}
  else if(a==='sharegfx'){if(!gcanvas)return;const b=await gfxBlob();const f=new File([b],gfxName(),{type:'image/png'});
   try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f]});else await navigator.share({title:'Liga Central',url:APP_URL})}catch(x){}}});
