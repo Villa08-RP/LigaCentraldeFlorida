@@ -1,6 +1,6 @@
 // Keeps the app opening fast and working with weak signal at the park.
-const CACHE = 'liga-central-v4';
-const SHELL = ['./', 'index.html', 'arbitros.html', 'style.css', 'app.js', 'fb.js', 'firebase-config.js', 'logo.jpg', 'icon-192.png', 'icon-512.png', 'manifest.json'];
+const CACHE = 'liga-central-v5';
+const SHELL = ['./', 'index.html', 'arbitros.html', 'demo.html', 'fb-demo.js', 'style.css', 'app.js', 'fb.js', 'firebase-config.js', 'logo.jpg', 'icon-192.png', 'icon-512.png', 'manifest.json'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 // Network first (so updates show up right away), saved copy when offline.
