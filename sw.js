@@ -1,5 +1,5 @@
 // Keeps the app opening fast and working with weak signal at the park.
-const CACHE = 'liga-central-v2';
+const CACHE = 'liga-central-v3';
 const SHELL = ['./', 'index.html', 'arbitros.html', 'style.css', 'app.js', 'fb.js', 'firebase-config.js', 'logo.jpg', 'icon-192.png', 'icon-512.png', 'manifest.json'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
