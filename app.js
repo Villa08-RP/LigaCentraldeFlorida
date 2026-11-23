@@ -1,7 +1,7 @@
 import * as fb from "./fb.js";
 
 const LOGO = "logo.jpg";
-const VIEWS = ['schedule','gameday','table','payouts','graphic','history','setup','refs'];
+const VIEWS = ['schedule','gameday','table','payouts','finance','graphic','history','setup','refs'];
 const L = {
 en:{schedule:'Schedule',gameday:'Game day',payouts:'Ref pay',graphic:'Post graphic',history:'History',setup:'Setup',week:'Week',date:'Date',time:'Time',park:'Park',field:'Field',home:'Home',away:'Away',center:'Center',ar1:'AR 1',ar2:'AR 2',addGame:'+ Add game',addSlot:'+ Add time slot (3 games)',del:'Delete',sure:'Tap again',kickoff:'KICKOFF',
 st_sched:'Scheduled',st_live:'Playing',st_final:'Final',st_cancel:'Cancelled',paid:'Paid',notPaid:'Not paid',feesPaid:'Teams paid',gamesFinal:'Games final',collected:'Collected',player:'Player name',yellow:'Yellow',red:'Red',
@@ -14,11 +14,13 @@ findMe:'Find your name',all:'Everyone',refTitle:'Referee assignments',noPublic:'
 w_field:'Two games on {f} at {p} at {t}',w_ref:'{r} is on 2 games at {t}',w_team:'{x} is scheduled twice this week',w_same:'{r} is listed twice in the same game',warnTitle:'Check these:',
 remind:'Next Sunday ({d}) isn\'t posted yet.',remindNew:'Create it',remindOpen:'Open it',
 saving:'Saving…',saved:'Saved ✓',offline:'Offline — will sync',err:'Not saved',
-cash:'Cash check',cashTxt:'Fees collected minus ref pay',refSummary:'Pay per referee',noGames:'No games yet.',copyFrom:'The new week copies this week\'s times, fields and parks with blank teams and referees.',unpaidTeams:'Still owe the ref fee',
+cash:'Cash check',cashTxt:'Fees collected minus ref pay',refSummary:'Pay per referee',noGames:'No games yet.',copyFrom:'Each new Sunday starts empty: no games, fees, results or ref pay from past weeks.',unpaidTeams:'Still owe the ref fee',
 login:'Staff login',email:'Email',password:'Password',signIn:'Sign in',signOut:'Sign out',loginErr:'Wrong email or password.',noAccess:'This account doesn\'t have staff access. Ask the admin to add your email.',signedAs:'Signed in as',loading:'Loading…',refsLink:'Referee? Open the assignments',table:'Standings',team:'Team',pj:'P',w:'W',d:'D',l:'L',gf:'GF',ga:'GA',gd:'GD',pts:'Pts',edit:'Edit',editTeam:'Edit {x}',
 totalsHint:'Change the numbers so they match the real table (games played before the app, or corrections). Points are recalculated from wins and draws unless you change Pts.',saveChanges:'Save changes',penalty:'Points penalty',penPts:'Points (use - to take away, e.g. -3)',reason:'Reason',applyPen:'Apply penalty',pens:'Penalties',noPens:'No penalties',withdraw:'Mark as withdrawn',withdrawn:'Withdrew',reinstate:'Bring back to the table',
 confirmTitle:'Please confirm',confirm:'Yes, confirm',cancel:'Cancel',close:'Close',cTake:'Take {n} points away from {x}?',cGive:'Give {n} points to {x}?',cDelPen:'Remove this penalty from {x}? ({n} pts)',cOut:'Mark {x} as withdrawn? The team moves to the bottom of the table.',cIn:'Bring {x} back into the table?',cEdit:'Change these numbers for {x}?',noChange:'Nothing changed.',
-restart:'Restart the league',restartTxt1:'This starts a new season from zero. The table, penalties and manual changes go back to zero and only games from the start date on will count. Teams, referees, parks, ref fee and settings stay the same. Past games stay saved in History under previous seasons.',restartStart:'New season starts on',cont:'Continue',restartTxt2:'Last check. Type {w} below to restart the league.',restartWord:'RESTART',restartBtn:'Restart now',season:'Season',since:'since',prevSeasons:'Previous seasons',curSeason:'This season',tableHint:'Counts games marked Final with a score. Win = 3 pts, draw = 1 pt.',gfxSub:'MATCH SCHEDULE'},
+restart:'Restart the league',restartTxt1:'This starts a new season from zero. The table, penalties and manual changes go back to zero and only games from the start date on will count. Teams, referees, parks, ref fee and settings stay the same. Past games stay saved in History under previous seasons.',restartStart:'New season starts on',cont:'Continue',restartTxt2:'Last check. Type {w} below to restart the league.',restartWord:'RESTART',restartBtn:'Restart now',season:'Season',since:'since',prevSeasons:'Previous seasons',curSeason:'This season',tableHint:'Counts games marked Final with a score. Win = 3 pts, draw = 1 pt.',gfxSub:'MATCH SCHEDULE',finance:'Finances',sunday:'Game day date',sundayHint:'Pick a date to open it. A new date starts with an empty schedule.',newWeekBtn:'+ New date',cDelWeek:'Delete {d} and everything in it (games, fees, results, ref pay)? This can\'t be undone.',
+finTeam:'Team',finAmt:'Amount ($)',finWhy:'Reason',addDebt:'+ Add debt',addPay:'− Record payment',cDebt:'Add a debt of {a} to {x}?',cPay:'Record a payment of {a} from {x}?',cDelFin:'Delete this entry? ({x} {a})',
+owesTotal:'Total owed to the league',balances:'Who owes',noDebts:'No team owes anything.',entries:'History',noEntries:'Nothing recorded yet.',owes:'owes',inFavor:'credit',debt:'Debt',payment:'Payment',allTeams:'All teams',needTeamAmt:'Pick a team and an amount.'},
 es:{schedule:'Programación',gameday:'Día de juego',payouts:'Pago árbitros',graphic:'Imagen para redes',history:'Historial',setup:'Ajustes',week:'Semana',date:'Fecha',time:'Hora',park:'Parque',field:'Cancha',home:'Local',away:'Visitante',center:'Central',ar1:'Línea 1',ar2:'Línea 2',addGame:'+ Agregar partido',addSlot:'+ Agregar horario (3 partidos)',del:'Borrar',sure:'Toca otra vez',kickoff:'INICIO',
 st_sched:'Programado',st_live:'En juego',st_final:'Final',st_cancel:'Cancelado',paid:'Pagó',notPaid:'No ha pagado',feesPaid:'Equipos pagaron',gamesFinal:'Partidos finalizados',collected:'Cobrado',player:'Nombre del jugador',yellow:'Amarilla',red:'Roja',
 refName:'Árbitro',centers:'Central',lines:'Línea',total:'Total',owed:'Total a pagar árbitros',paidOut:'Pagado',left:'Falta pagar',paidQ:'¿Pagado?',noRefs:'Todavía no hay árbitros asignados. Agrégalos en Programación.',
@@ -30,11 +32,13 @@ findMe:'Busca tu nombre',all:'Todos',refTitle:'Asignación de árbitros',noPubli
 w_field:'Dos partidos en {f} de {p} a las {t}',w_ref:'{r} tiene 2 partidos a las {t}',w_team:'{x} juega dos veces esta semana',w_same:'{r} aparece dos veces en el mismo partido',warnTitle:'Revisa esto:',
 remind:'El próximo domingo ({d}) todavía no está publicado.',remindNew:'Crearlo',remindOpen:'Abrirlo',
 saving:'Guardando…',saved:'Guardado ✓',offline:'Sin conexión — se sincroniza luego',err:'No se guardó',
-cash:'Cuadre de caja',cashTxt:'Cuotas cobradas menos pago a árbitros',refSummary:'Pago por árbitro',noGames:'Todavía no hay partidos.',copyFrom:'La nueva semana copia las horas, canchas y parques de esta semana, con equipos y árbitros en blanco.',unpaidTeams:'Deben la cuota de árbitro',
+cash:'Cuadre de caja',cashTxt:'Cuotas cobradas menos pago a árbitros',refSummary:'Pago por árbitro',noGames:'Todavía no hay partidos.',copyFrom:'Cada domingo nuevo empieza vacío: sin partidos, cuotas, resultados ni pagos de semanas pasadas.',unpaidTeams:'Deben la cuota de árbitro',
 login:'Acceso staff',email:'Correo',password:'Contraseña',signIn:'Entrar',signOut:'Cerrar sesión',loginErr:'Correo o contraseña incorrectos.',noAccess:'Esta cuenta no tiene acceso de staff. Pide al administrador que agregue tu correo.',signedAs:'Sesión de',loading:'Cargando…',refsLink:'¿Eres árbitro? Ver asignaciones',table:'Tabla',team:'Equipo',pj:'PJ',w:'G',d:'E',l:'P',gf:'GF',ga:'GC',gd:'DG',pts:'Pts',edit:'Editar',editTeam:'Editar {x}',
 totalsHint:'Cambia los números para que coincidan con la tabla real (partidos jugados antes de la app, o correcciones). Los puntos se calculan con victorias y empates, a menos que cambies Pts.',saveChanges:'Guardar cambios',penalty:'Sanción de puntos',penPts:'Puntos (usa - para quitar, ej. -3)',reason:'Motivo',applyPen:'Aplicar sanción',pens:'Sanciones',noPens:'Sin sanciones',withdraw:'Marcar como retirado',withdrawn:'Retirado',reinstate:'Regresar a la tabla',
 confirmTitle:'Confirma por favor',confirm:'Sí, confirmar',cancel:'Cancelar',close:'Cerrar',cTake:'¿Quitar {n} puntos a {x}?',cGive:'¿Dar {n} puntos a {x}?',cDelPen:'¿Quitar esta sanción a {x}? ({n} pts)',cOut:'¿Marcar a {x} como retirado? El equipo pasa al final de la tabla.',cIn:'¿Regresar a {x} a la tabla?',cEdit:'¿Cambiar estos números de {x}?',noChange:'No hay cambios.',
-restart:'Reiniciar la liga',restartTxt1:'Esto empieza una temporada nueva desde cero. La tabla, las sanciones y los cambios manuales vuelven a cero y solo cuentan los partidos desde la fecha de inicio. Equipos, árbitros, parques, cuota y ajustes se quedan igual. Los partidos pasados quedan guardados en Historial como temporadas anteriores.',restartStart:'La nueva temporada empieza el',cont:'Continuar',restartTxt2:'Última confirmación. Escribe {w} abajo para reiniciar la liga.',restartWord:'REINICIAR',restartBtn:'Reiniciar ahora',season:'Temporada',since:'desde',prevSeasons:'Temporadas anteriores',curSeason:'Esta temporada',tableHint:'Cuenta los partidos marcados como Final con marcador. Victoria = 3 pts, empate = 1 pt.',gfxSub:'PROGRAMACIÓN DE PARTIDOS'}};
+restart:'Reiniciar la liga',restartTxt1:'Esto empieza una temporada nueva desde cero. La tabla, las sanciones y los cambios manuales vuelven a cero y solo cuentan los partidos desde la fecha de inicio. Equipos, árbitros, parques, cuota y ajustes se quedan igual. Los partidos pasados quedan guardados en Historial como temporadas anteriores.',restartStart:'La nueva temporada empieza el',cont:'Continuar',restartTxt2:'Última confirmación. Escribe {w} abajo para reiniciar la liga.',restartWord:'REINICIAR',restartBtn:'Reiniciar ahora',season:'Temporada',since:'desde',prevSeasons:'Temporadas anteriores',curSeason:'Esta temporada',tableHint:'Cuenta los partidos marcados como Final con marcador. Victoria = 3 pts, empate = 1 pt.',gfxSub:'PROGRAMACIÓN DE PARTIDOS',finance:'Finanzas',sunday:'Fecha de juego',sundayHint:'Elige una fecha para abrirla. Una fecha nueva empieza con la programación vacía.',newWeekBtn:'+ Nueva fecha',cDelWeek:'¿Borrar el {d} y todo lo que tiene (partidos, cuotas, resultados, pago de árbitros)? No se puede deshacer.',
+finTeam:'Equipo',finAmt:'Monto ($)',finWhy:'Motivo',addDebt:'+ Agregar deuda',addPay:'− Registrar pago',cDebt:'¿Agregar una deuda de {a} a {x}?',cPay:'¿Registrar un pago de {a} de {x}?',cDelFin:'¿Borrar este registro? ({x} {a})',
+owesTotal:'Total que deben a la liga',balances:'Quién debe',noDebts:'Ningún equipo debe nada.',entries:'Historial',noEntries:'Todavía no hay registros.',owes:'debe',inFavor:'a favor',debt:'Deuda',payment:'Pago',allTeams:'Todos los equipos',needTeamAmt:'Elige un equipo y un monto.'}};
 
 let lang = 'es'; try { lang = localStorage.getItem('lcf-lang') || 'es'; } catch (e) {}
 const t = (k, v) => { let s = (L[lang][k] ?? L.en[k] ?? k); if (v) for (const x in v) s = s.split('{' + x + '}').join(v[x]); return s; };
@@ -110,7 +114,7 @@ document.addEventListener('focusout', () => setTimeout(() => { if (pendingRender
 // ---------- reading data from Firebase ----------
 const toMap = gs => Array.isArray(gs) ? Object.fromEntries(gs.map(g => [g.id, g])) : (gs || {});
 const toArr = (m) => Object.entries(m || {}).map(([id, g]) => ({ ...g, id, cards: g.cards || [] }));
-function mainFrom(d){ const m = merge(JSON.parse(JSON.stringify(d || {})), pending['league/main'] || {}); S.settings = m.settings || { fee: null, center: 70, side: 45 }; S.teams = m.teams || []; S.refs = m.refs || []; S.table = m.table || {}; S.parks = m.parks || []; }
+function mainFrom(d){ const m = merge(JSON.parse(JSON.stringify(d || {})), pending['league/main'] || {}); S.settings = m.settings || { fee: null, center: 70, side: 45 }; S.teams = m.teams || []; S.refs = m.refs || []; S.table = m.table || {}; S.fin = m.fin || {}; S.parks = m.parks || []; }
 function weekFrom(raw){ const d = { ...raw, games: toMap(raw.games) }; const p = pending['weeks/' + raw.id]; const m = p ? merge(JSON.parse(JSON.stringify(d)), p) : d;
  return { id: raw.id, num: m.num, date: m.date, posted: !!m.posted, refPaid: m.refPaid || {}, games: toArr(m.games) }; }
 const migrated = new Set();
@@ -142,7 +146,7 @@ function startStaff(){
   if (d && !d.refsAdded1) { INITIAL_REFS.forEach(n => addList('refs', n)); patch('league/main', { refs: S.refs, refsAdded1: true }); }
   softRender(); }, onErr));
  unsub.push(fb.watchWeeks(ws => { ws.forEach(migrate); S.weeks = ws.map(weekFrom);
-  weeksLoaded = true; if (!viewWeekId || !S.weeks.some(w => w.id === viewWeekId)) viewWeekId = S.weeks.length ? newest(S.weeks).id : null; softRender(); }, onErr));
+  weeksLoaded = true; if (!viewWeekId || !S.weeks.some(w => w.id === viewWeekId)) viewWeekId = S.weeks.length ? pickPublic(S.weeks).id : null; softRender(); }, onErr));
  seedIfEmpty().catch(onErr);
 }
 function startPublic(){ if (unsub.length) return; unsub.push(fb.watchPublic(ws => { PUB = ws.map(w => ({ id: w.id, num: w.num, date: w.date, games: toArr(toMap(w.games)) })); softRender(); }, () => { pubErr = true; render(); })); }
@@ -171,6 +175,27 @@ function vTable(){const rows=standings();let pos=0;
  +rows.map(r=>{if(!r.out)pos++;return '<tr class="'+(r.out?'outr':'')+'"><td>'+(r.out?'—':pos)+'</td><td class="tn"><b>'+esc(r.name)+'</b>'+(r.out?' <span class="pk">'+t('withdrawn')+'</span>':'')+(r.pen?' <span class="pk" style="background:#5a1f1a">'+(r.pen>0?'+':'')+r.pen+'</span>':'')+'</td><td><b style="color:var(--or);font-size:15px">'+r.pts+'</b></td>'+F6.map(f=>'<td>'+r[f]+'</td>').join('')+'<td>'+(r.gd>0?'+':'')+r.gd+'</td><td><button class="btn sm" data-act="editteam" data-k="'+esc(r.k)+'" title="'+t('edit')+'">✎</button></td></tr>'}).join('')+'</table></div>';
  h+='<div class="card mt" style="border-color:#7a2a22"><button class="btn warn" data-act="restart">⟲ '+t('restart')+'</button><div class="muted mt">'+t('restartTxt1')+'</div></div>';
  return h}
+
+// ---------- dates ----------
+function openDate(date){if(!date)return;let w=S.weeks.find(x=>x.date===date);
+ if(!w){let id='w'+date.replace(/-/g,'');if(S.weeks.some(x=>x.id===id))id+='-'+uid();
+  w={id,num:0,date,posted:false,refPaid:{},games:[]};S.weeks.push(w);
+  patch('weeks/'+id,{num:0,date,posted:false,refPaid:{},games:{}});patch('public/'+id,{num:0,date,games:{}})}
+ viewWeekId=w.id;location.hash='schedule';render()}
+// ---------- finances ----------
+function finEntries(){return Object.entries(S.fin||{}).map(([id,e])=>({id,...e})).filter(e=>e&&e.team).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.ts||0)-(a.ts||0))}
+function finBalances(){const m={};finEntries().forEach(e=>{const k=tkey(e.team);m[k]=m[k]||{name:S.teams.find(x=>tkey(x)===k)||e.team,bal:0};m[k].bal+=e.kind==='pay'?-Number(e.amt):Number(e.amt)});return Object.values(m).sort((a,b)=>b.bal-a.bal)}
+let finFilter='',finVals={};
+function vFinance(){const bal=finBalances();const owed=bal.filter(b=>b.bal>0);const tot=owed.reduce((s,b)=>s+b.bal,0);const shown=bal.filter(b=>Math.abs(b.bal)>0.001);
+ let h='<h2>'+t('finance')+'</h2><div class="chips"><div class="chip"><span>'+t('owesTotal')+'</span><b style="color:var(--or)">'+money(tot)+'</b></div></div>';
+ h+='<div class="card"><div class="g3"><label class="f">'+t('finTeam')+'<input list="dlt" data-act="fv" data-f="team" value="'+esc(finVals.team||'')+'"></label><label class="f">'+t('finAmt')+'<input type="number" inputmode="decimal" min="0" step="0.01" data-act="fv" data-f="amt" value="'+esc(finVals.amt||'')+'"></label><label class="f">'+t('finWhy')+'<input data-act="fv" data-f="why" value="'+esc(finVals.why||'')+'"></label></div>'
+ +'<div class="row mt"><button class="btn warn" data-act="findebt">'+t('addDebt')+'</button><button class="btn" style="background:#1f7a45;border-color:#1f7a45;color:#fff" data-act="finpay">'+t('addPay')+'</button></div></div>';
+ h+='<div class="card"><b>'+t('balances')+'</b>'+(shown.length?'<table class="mt">'+shown.map(b=>'<tr><td><a href="#finance" data-act="finfilter" data-k="'+esc(tkey(b.name))+'" style="color:var(--tx)"><b>'+esc(b.name)+'</b></a></td><td class="n"><b style="color:'+(b.bal>0?'#ff9b8f':'var(--gr)')+'">'+money(Math.abs(b.bal))+'</b> <span class="muted">'+(b.bal>0?t('owes'):t('inFavor'))+'</span></td></tr>').join('')+'</table>':'<div class="muted mt">'+t('noDebts')+'</div>')+'</div>';
+ const es=finEntries().filter(e=>!finFilter||tkey(e.team)===finFilter);
+ h+='<div class="card"><div class="row" style="justify-content:space-between"><b>'+t('entries')+'</b>'+(finFilter?'<button class="btn sm" data-act="finfilter" data-k="">'+t('allTeams')+'</button>':'')+'</div>'
+ +(es.length?es.map(e=>'<div class="row mt" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:8px"><span><b style="color:'+(e.kind==='pay'?'var(--gr)':'#ff9b8f')+'">'+(e.kind==='pay'?'−':'+')+money(Number(e.amt))+'</b> · <b>'+esc(e.team)+'</b> · '+esc(e.reason||'')+'<br><span class="muted">'+(e.kind==='pay'?t('payment'):t('debt'))+' · '+esc(fmtDate(e.date))+'</span></span><button class="btn sm del" data-act="delfin" data-id="'+e.id+'">×</button></div>').join(''):'<div class="muted mt">'+t('noEntries')+'</div>')+'</div>';
+ return h}
+
 // ---------- dialogs ----------
 let dlg=null,editK=null,editVals={};
 function nextSunday(){const d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7||7));return iso(d)}
@@ -199,11 +224,11 @@ function header(v){const ws=S.weeks.slice().sort((a,b)=>b.date.localeCompare(a.d
  +langBtns()+'</div>'
  +(staff?'<nav>'+VIEWS.filter(x=>x!=='refs').map(x=>'<a href="#'+x+'" class="'+(x===v?'on':'')+'">'+t(x)+'</a>').join('')+'</nav>':'')+'</header>'}
 function reminder(){const now=new Date();const dow=now.getDay();if(dow===0)return'';const ns=new Date(now);ns.setDate(now.getDate()+(7-dow));const d=iso(ns);const w=S.weeks.find(x=>x.date===d);if(w&&w.posted)return'';
- return '<div class="notice">🔔 '+esc(t('remind',{d:fmtDate(d)}))+' '+(w?'<button class="btn sm pri" data-act="openweek" data-id="'+w.id+'">'+t('remindOpen')+'</button>':'<button class="btn sm pri" data-act="newweek">'+t('remindNew')+'</button>')+'</div>'}
+ return '<div class="notice">🔔 '+esc(t('remind',{d:fmtDate(d)}))+' '+(w?'<button class="btn sm pri" data-act="openweek" data-id="'+w.id+'">'+t('remindOpen')+'</button>':'<button class="btn sm pri" data-act="newweek" data-date="'+d+'">'+t('remindNew')+'</button>')+'</div>'}
 function warnHtml(w){const ws=warnings(w);return ws.length?'<div class="warns"><b>⚠ '+t('warnTitle')+'</b>'+ws.map(x=>'<div>• '+esc(x)+'</div>').join('')+'</div>':''}
 function vLogin(){return '<div class="login card"><img src="'+LOGO+'" alt=""><h2 style="text-align:center">'+t('login')+'</h2><form id="loginf"><label class="f mb">'+t('email')+'<input type="email" id="le" autocomplete="username" required></label><label class="f mb">'+t('password')+'<input type="password" id="lp" autocomplete="current-password" required></label><button class="btn pri" style="width:100%">'+t('signIn')+'</button>'+(loginErr?'<div class="err">'+esc(loginErr)+'</div>':'')+'</form><p style="text-align:center" class="mt"><a href="#refs" style="color:var(--or)">'+t('refsLink')+'</a></p></div>'}
 function vSchedule(w){let h=reminder();
- h+='<div class="card"><div class="g3" style="grid-template-columns:1fr"><label class="f">'+t('date')+'<input type="date" data-act="wk" data-k="date" value="'+w.date+'"></label></div></div>';
+ h+='<div class="card"><label class="f">'+t('sunday')+'<input type="date" data-act="gotodate" value="'+w.date+'"></label><div class="muted mt">'+t('sundayHint')+'</div></div>';
  h+='<div id="warns">'+warnHtml(w)+'</div>';
  const gs=groups(w);if(!gs.length)h+='<div class="empty">'+t('noGames')+'</div>';
  gs.forEach(gr=>{h+='<div class="band">'+fmtTime(gr.time)+'<small>'+t('kickoff')+'</small></div>';
@@ -238,11 +263,11 @@ function vPayouts(w){const p=payouts(w);const names=Object.keys(p).sort((a,b)=>a
  return h}
 function vGraphic(w){return '<div class="row mb" style="justify-content:space-between"><label class="paid '+(w.posted?'yes':'')+'"><input type="checkbox" data-act="posted"'+(w.posted?' checked':'')+'>'+(w.posted?'✓ '+t('posted'):t('markPosted'))+'</label><div class="row">'+(navigator.share?'<button class="btn pri" data-act="sharegfx">↗ '+t('share')+'</button>':'')+'<button class="btn" data-act="dlgfx">⬇ '+t('dl')+'</button></div></div><img id="gimg" class="gimg" alt=""><p class="muted" style="text-align:center">'+t('graphicHint')+'</p>'}
 function vHistory(){const ws=S.weeks.slice().sort((a,b)=>b.date.localeCompare(a.date));
- let h='<div class="row mb"><button class="btn pri" data-act="newweek">'+t('newWeek')+'</button></div><p class="muted">'+t('copyFrom')+'</p>';
+ let h='<div class="row mb"><button class="btn pri" data-act="newweek">'+t('newWeekBtn')+'</button></div><p class="muted">'+t('copyFrom')+'</p>';
  let shownPrev=false;if(S.settings.seasonStart)h+='<h2 style="font-size:16px">'+t('curSeason')+' <span class="muted">('+t('since')+' '+esc(fmtDate(S.settings.seasonStart))+')</span></h2>';
  ws.forEach(w=>{if(!inSeason(w)&&!shownPrev){shownPrev=true;h+='<h2 style="font-size:16px;margin-top:24px">'+t('prevSeasons')+'</h2>'}const f=feeStats(w),pt=payTotal(w),cards=[];w.games.forEach(g=>(g.cards||[]).forEach(c=>cards.push({c,g})));
   h+='<div class="card"><div class="hist"><div><b style="font-size:16px">'+esc(fmtDate(w.date,true))+'</b><div class="muted">'+w.games.length+' '+t('games')+' · '+t('feesPaid')+' '+f.paid+'/'+f.teams+' · '+t('owed')+' '+money(pt.tot)+'</div></div>'
-  +(w.id===week().id?'<span class="pk">'+t('current')+'</span>':'<button class="btn sm" data-act="openweek" data-id="'+w.id+'">'+t('open')+'</button>')+'</div>'
+  +'<div class="row">'+(w.id===week().id?'<span class="pk">'+t('current')+'</span>':'<button class="btn sm" data-act="openweek" data-id="'+w.id+'">'+t('open')+'</button>')+(S.weeks.length>1?'<button class="btn sm del" data-act="delweek" data-id="'+w.id+'">'+t('del')+'</button>':'')+'</div></div>'
   +'<details class="mt"><summary class="muted" style="cursor:pointer">'+t('results')+'</summary><div class="mt">'+groups(w).map(gr=>gr.games.map(g=>'<div class="res">'+fmtTime(g.time)+' · '+t('field')+' '+esc(g.field)+' — <b>'+esc(g.home)+'</b> '+(g.status==='cancel'?'<span class="muted">('+t('st_cancel')+')</span>':(g.hs!==''||g.as!==''?'<b style="color:var(--or)">'+esc(g.hs)+' - '+esc(g.as)+'</b>':'vs'))+' <b>'+esc(g.away)+'</b></div>').join('')).join('')
   +'<div class="cards mt">'+(cards.length?cards.map(({c,g})=>'<span class="ck"><i class="'+c.type+'"></i>'+esc(c.player)+' <span class="muted">('+esc(c.team==='h'?g.home:g.away)+')</span></span>').join(''):'<span class="muted">'+t('noCards')+'</span>')+'</div></div></details></div>'});
  return h}
@@ -268,8 +293,8 @@ function render(){const v=view();const app=document.getElementById('app');docume
  if(accessDenied){app.innerHTML=header(v)+'<main><div class="notice">'+t('noAccess')+'</div><button class="btn" data-act="signout">'+t('signOut')+'</button></main>';return}
  if(!mainLoaded||!weeksLoaded||!S.weeks.length){app.innerHTML=header(v)+'<main><div class="empty">'+t('loading')+'</div></main>';return}
  const w=week();
- const body=v==='schedule'?vSchedule(w):v==='gameday'?vGameday(w):v==='table'?vTable():v==='payouts'?vPayouts(w):v==='graphic'?vGraphic(w):v==='history'?vHistory():vSetup();
- const title=v==='history'||v==='setup'||v==='table'?'':'<h2>'+t(v)+' <span class="muted" style="font-weight:600">· '+esc(fmtDate(w.date,true))+'</span></h2>';
+ const body=v==='schedule'?vSchedule(w):v==='gameday'?vGameday(w):v==='table'?vTable():v==='finance'?vFinance():v==='payouts'?vPayouts(w):v==='graphic'?vGraphic(w):v==='history'?vHistory():vSetup();
+ const title=v==='history'||v==='setup'||v==='table'||v==='finance'?'':'<h2>'+t(v)+' <span class="muted" style="font-weight:600">· '+esc(fmtDate(w.date,true))+'</span></h2>';
  app.innerHTML=header(v)+'<main>'+(saveErr?'<div class="warns"><b>⚠ '+t('err')+'</b> ('+esc(saveErr)+')</div>':'')+title+body+'</main>'+modals()+dl('dlt',S.teams)+dl('dlr',S.refs)+dl('dlp',S.parks);
  setSave(saveState);if(v==='graphic')drawGraphic(w)}
 
@@ -334,13 +359,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-act
   else{const gs=groups(w);const last=gs[gs.length-1];let tm='09:00',park=S.parks[0]||'',fields=['8','9','10'];if(last){const[h,m]=last.time.split(':').map(Number);tm=String(Math.min(h+2,23)).padStart(2,'0')+':'+String(m).padStart(2,'0');park=last.games[0].park;fields=last.games.map(g=>g.field)}add=fields.map(f=>newGame({time:tm,park,field:f}))}
   add.forEach(g=>{w.games.push(g);patch('weeks/'+w.id,{games:{[g.id]:fullGame(g)}});patch('public/'+w.id,{num:w.num,date:w.date,games:{[g.id]:pubGame(g)}})});render()}
  else if(a==='delgame'){if(armed!==el.dataset.id){armed=el.dataset.id;el.textContent=t('sure');el.classList.add('warn');setTimeout(()=>{if(armed===el.dataset.id){armed=null;el.textContent=t('del');el.classList.remove('warn')}},3000);return}armed=null;const id=el.dataset.id;w.games=w.games.filter(g=>g.id!==id);patch('weeks/'+w.id,{games:{[id]:fb.DEL}});patch('public/'+w.id,{games:{[id]:fb.DEL}});render()}
- else if(a==='newweek'){const base=newest(S.weeks);const d=pDate(base.date);d.setDate(d.getDate()+7);
-  let id='w'+iso(d).replace(/-/g,'');if(S.weeks.some(x=>x.id===id))id+='-'+uid();
-  const nw={id,num:base.num+1,date:iso(d),posted:false,refPaid:{},games:base.games.filter(g=>g.status!=='cancel').map(g=>newGame({time:g.time,park:g.park,field:g.field}))};
-  S.weeks.push(nw);viewWeekId=nw.id;
-  patch('weeks/'+id,{num:nw.num,date:nw.date,posted:false,refPaid:{},games:Object.fromEntries(nw.games.map(g=>[g.id,fullGame(g)]))});
-  patch('public/'+id,{num:nw.num,date:nw.date,games:Object.fromEntries(nw.games.map(g=>[g.id,pubGame(g)]))});
-  location.hash='schedule';render()}
+ else if(a==='newweek'){let date=el.dataset.date;if(!date){const d=pDate(newest(S.weeks).date);d.setDate(d.getDate()+7);date=iso(d)}openDate(date)}
  else if(a==='openweek'){viewWeekId=el.dataset.id;location.hash='schedule';render()}
  else if(a==='copylink'){try{await navigator.clipboard.writeText(REF_URL);el.textContent=t('copied')}catch(x){const i=el.closest('.card').querySelector('input');if(i)i.select()}}
  else if(a==='dlgfx'){if(!gcanvas)return;const b=await gfxBlob();const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download=gfxName();document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)}
@@ -366,6 +385,19 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
  else if(a==='restart'){ask('<b>'+t('restart')+'</b><p class="muted">'+t('restartTxt1')+'</p>',ctx=>{const date=ctx.date||nextSunday();
    ask(esc(t('restartTxt2',{w:t('restartWord')})),()=>{patchMain({settings:{seasonStart:date,season:(S.settings.season||1)+1},table:fb.DEL});S.table={}},{danger:true,word:t('restartWord'),okLabel:t('restartBtn')})},
   {danger:true,date:nextSunday(),okLabel:t('cont')})}
+});
+
+// ---------- date + finance actions ----------
+document.addEventListener('input',e=>{const el=e.target;if(el.dataset.act==='fv')finVals[el.dataset.f]=el.value});
+document.addEventListener('change',e=>{const el=e.target;if(el.dataset.act==='gotodate'&&user&&el.value)openDate(el.value)});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||!user)return;const a=el.dataset.act;
+ if(a==='delweek'){const w=S.weeks.find(x=>x.id===el.dataset.id);if(!w)return;ask('<b>'+esc(t('cDelWeek',{d:fmtDate(w.date,true)}))+'</b>',()=>{S.weeks=S.weeks.filter(x=>x.id!==w.id);delete pending['weeks/'+w.id];delete pending['public/'+w.id];
+   fb.remove('weeks',w.id).catch(console.error);fb.remove('public',w.id).catch(console.error);if(viewWeekId===w.id)viewWeekId=S.weeks.length?pickPublic(S.weeks).id:null},{danger:true})}
+ else if(a==='finfilter'){e.preventDefault();finFilter=el.dataset.k;render()}
+ else if(a==='findebt'||a==='finpay'){const team=(finVals.team||'').trim(),amt=Math.round(parseFloat(finVals.amt)*100)/100,why=(finVals.why||'').trim();if(!team||!(amt>0)){ask(t('needTeamAmt'),null,{ok:false});return}
+  const kind=a==='finpay'?'pay':'debt';const cn=S.teams.find(x=>tkey(x)===tkey(team))||team;ask('<b>'+esc(kind==='pay'?t('cPay',{a:money(amt),x:cn}):t('cDebt',{a:money(amt),x:cn}))+'</b>'+(why?'<div class="muted mt">'+t('finWhy')+': '+esc(why)+'</div>':''),()=>{
+   const canon=S.teams.find(x=>tkey(x)===tkey(team))||team;patchMain({fin:{[uid()]:{team:canon,amt,reason:why,kind,date:iso(new Date()),ts:Date.now()}}});finVals={}},{danger:kind==='debt'})}
+ else if(a==='delfin'){const id=el.dataset.id,x=(S.fin||{})[id];if(!x)return;ask(esc(t('cDelFin',{x:x.team,a:(x.kind==='pay'?'−':'+')+money(Number(x.amt))})),()=>patchMain({fin:{[id]:fb.DEL}}),{danger:true})}
 });
 window.addEventListener('hashchange',()=>{editK=null;dlg=null;render()});
 render();

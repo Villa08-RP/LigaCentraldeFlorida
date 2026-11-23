@@ -1,7 +1,7 @@
 // Data layer: everything that talks to Firebase lives here.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, deleteField, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, deleteDoc, deleteField, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -25,6 +25,7 @@ export const watchPublic = (cb, onErr) => onSnapshot(collection(db, "public"), s
 // Only the fields that changed are sent, so two staff editing different games never erase each other.
 export const patch = (coll, id, obj) => setDoc(doc(db, coll, id), conv(obj), { merge: true });
 export const replace = (coll, id, obj) => setDoc(doc(db, coll, id), obj);
+export const remove = (coll, id) => deleteDoc(doc(db, coll, id));
 
 export async function isEmptyOnServer() {
   const m = await getDocFromServer(doc(db, "league", "main"));
